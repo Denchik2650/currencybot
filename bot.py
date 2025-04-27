@@ -8,32 +8,30 @@ from scipy.interpolate import make_interp_spline
 import io
 import os
 
+# Интенты
 intents = discord.Intents.default()
 intents.guilds = True
 intents.members = True
+
 bot = commands.Bot(command_prefix='/', intents=intents)
 
+# Валюты
 BASE_CURRENCY = 'SOL'
-exchange_rates = {
-    'SOL': 1.0,
-    'LUN': 3.5,
-    'TAR': 0.8,
-    'VEX': 5.2
+exchange_rates = {'SOL': 1.0, 'LUN': 3.5, 'TAR': 0.8, 'VEX': 5.2}
+currency_volatility = {'SOL': 0.01, 'LUN': 0.02, 'TAR': 0.04, 'VEX': 0.1}
+exchange_rate_history = {
+    currency: [rate]
+    for currency, rate in exchange_rates.items()
 }
-currency_volatility = {
-    'SOL': 0.01,
-    'LUN': 0.02,
-    'TAR': 0.04,
-    'VEX': 0.1
-}
-exchange_rate_history = {currency: [rate] for currency, rate in exchange_rates.items()}
 
 # Переменные для канала и роли
 exchange_rate_channel_id = None
 currency_manager_role_id = None
 
+
 # Проверка доступа по роли
 def has_currency_manager_role():
+
     async def predicate(ctx):
         if ctx.author.guild_permissions.administrator:
             return True
@@ -41,8 +39,11 @@ def has_currency_manager_role():
             return False
         role = discord.utils.get(ctx.author.roles, id=currency_manager_role_id)
         return role is not None
+
     return commands.check(predicate)
 
+
+# Функция обновления курсов валют
 def update_exchange_rates():
     for currency in exchange_rates:
         if currency == BASE_CURRENCY:
@@ -56,6 +57,8 @@ def update_exchange_rates():
         if len(exchange_rate_history[currency]) > 7:
             exchange_rate_history[currency].pop(0)
 
+
+# Текст курсов валют
 def get_exchange_rate_text():
     lines = [f'Курс {BASE_CURRENCY} на сегодня:']
     for currency, rate in exchange_rates.items():
@@ -63,13 +66,17 @@ def get_exchange_rate_text():
             lines.append(f'1 {BASE_CURRENCY} = {rate} {currency}')
     return '\n'.join(lines)
 
+
+# Генерация графика
 def generate_exchange_chart(currency_from, currency_to):
     rates_from = exchange_rate_history[currency_from]
     rates_to = exchange_rate_history[currency_to]
     rates = [b / a for a, b in zip(rates_from, rates_to)]
 
     days = list(range(len(rates)))
-    day_labels = [f"{7 - i} дн. назад" if i < 7 else "сегодня" for i in reversed(days)]
+    day_labels = [
+        f"{7 - i} дн. назад" if i < 7 else "сегодня" for i in reversed(days)
+    ]
 
     x = np.array(days)
     y = np.array(rates)
@@ -85,7 +92,8 @@ def generate_exchange_chart(currency_from, currency_to):
     plt.plot(x_smooth, y_smooth, color='blue')
     plt.scatter(x, y, color='red')
     plt.xticks(ticks=days, labels=day_labels, rotation=45)
-    plt.title(f'{currency_from}/{currency_to} за последнюю неделю', fontsize=14)
+    plt.title(f'{currency_from}/{currency_to} за последнюю неделю',
+              fontsize=14)
     plt.xlabel('День', fontsize=12)
     plt.ylabel(f'Курс {currency_from} к {currency_to}', fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.6)
@@ -97,8 +105,16 @@ def generate_exchange_chart(currency_from, currency_to):
     plt.close()
     return buf
 
-@bot.slash_command(name="exchangerate", description="Узнать курс и график валют")
-async def exchangerate(ctx, currency_from: str, currency_to: str, amount: float = 1.0):
+
+# --- Slash-команды ---
+
+
+@bot.slash_command(name="exchangerate",
+                   description="Узнать курс и график валют")
+async def exchangerate(ctx,
+                       currency_from: str,
+                       currency_to: str,
+                       amount: float = 1.0):
     currency_from = currency_from.upper()
     currency_to = currency_to.upper()
 
@@ -116,9 +132,14 @@ async def exchangerate(ctx, currency_from: str, currency_to: str, amount: float 
     file = discord.File(chart, filename="chart.png")
     await ctx.respond(text, file=file)
 
-@bot.slash_command(name="setrate", description="Изменить курс валюты и её волатильность")
+
+@bot.slash_command(name="setrate",
+                   description="Изменить курс валюты и её волатильность")
 @has_currency_manager_role()
-async def setrate(ctx, currency: str, new_rate: float, new_volatility: float = None):
+async def setrate(ctx,
+                  currency: str,
+                  new_rate: float,
+                  new_volatility: float = None):
     currency = currency.upper()
 
     if currency not in exchange_rates:
@@ -136,9 +157,13 @@ async def setrate(ctx, currency: str, new_rate: float, new_volatility: float = N
 
     await ctx.respond(response)
 
+
 @bot.slash_command(name="addcurrency", description="Добавить валюту")
 @has_currency_manager_role()
-async def addcurrency(ctx, currency: str, rate: float, volatility: float = 0.05):
+async def addcurrency(ctx,
+                      currency: str,
+                      rate: float,
+                      volatility: float = 0.05):
     currency = currency.upper()
 
     if currency in exchange_rates:
@@ -149,6 +174,7 @@ async def addcurrency(ctx, currency: str, rate: float, volatility: float = 0.05)
     currency_volatility[currency] = volatility
     exchange_rate_history[currency] = [rate]
     await ctx.respond(f"Валюта {currency} добавлена.")
+
 
 @bot.slash_command(name="removecurrency", description="Удалить валюту")
 @has_currency_manager_role()
@@ -168,19 +194,25 @@ async def removecurrency(ctx, currency: str):
     del exchange_rate_history[currency]
     await ctx.respond(f"Валюта {currency} удалена.")
 
-@bot.slash_command(name="setexchangechannel", description="Назначить канал для публикации курсов валют")
+
+@bot.slash_command(name="setexchangechannel",
+                   description="Назначить канал для публикации курсов валют")
 @commands.has_permissions(administrator=True)
 async def setexchangechannel(ctx, channel: discord.TextChannel):
     global exchange_rate_channel_id
     exchange_rate_channel_id = channel.id
-    await ctx.respond(f"Канал {channel.mention} теперь выбран для публикации курсов валют.")
+    await ctx.respond(
+        f"Канал {channel.mention} теперь выбран для публикации курсов валют.")
 
-@bot.slash_command(name="setcurrencyrole", description="Назначить роль для управления валютами")
+
+@bot.slash_command(name="setcurrencyrole",
+                   description="Назначить роль для управления валютами")
 @commands.has_permissions(administrator=True)
 async def setcurrencyrole(ctx, role: discord.Role):
     global currency_manager_role_id
     currency_manager_role_id = role.id
     await ctx.respond(f"Роль {role.mention} теперь может управлять валютами.")
+
 
 @bot.slash_command(name="maincurrency", description="Изменить основную валюту")
 @commands.has_permissions(administrator=True)
@@ -196,11 +228,14 @@ async def maincurrency(ctx, new_base_currency: str):
 
     for currency in exchange_rates:
         exchange_rates[currency] /= old_base_rate
-        exchange_rate_history[currency] = [rate / old_base_rate for rate in exchange_rate_history[currency]]
+        exchange_rate_history[currency] = [
+            rate / old_base_rate for rate in exchange_rate_history[currency]
+        ]
 
     BASE_CURRENCY = new_base_currency
 
     await ctx.respond(f"Основная валюта изменена на {BASE_CURRENCY}!")
+
 
 @bot.slash_command(name="help", description="Показать список команд бота")
 async def help_command(ctx):
@@ -216,7 +251,10 @@ async def help_command(ctx):
     )
     await ctx.respond(help_text)
 
+
+# Планировщик обновления курсов
 scheduler = AsyncIOScheduler()
+
 
 @scheduler.scheduled_job('cron', hour=12)
 async def scheduled_exchange_rate_post():
@@ -228,13 +266,14 @@ async def scheduled_exchange_rate_post():
         text = get_exchange_rate_text()
         await channel.send(text)
 
+
+# Когда бот готов
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
     scheduler.start()
 
-token = os.getenv("YOUR_BOT_TOKEN")
-if token is None:
-    print("Error: YOUR_BOT_TOKEN environment variable not found!")
-else:
-    bot.run(token)
+
+# Запуск бота
+token = os.getenv("DISCORD_TOKEN")  # Discord bot token from Replit Secrets
+bot.run(token)
