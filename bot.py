@@ -96,7 +96,7 @@ def generate_exchange_chart(currency_from, currency_to):
     plt.close()
     return buf
 
-@bot.slash_command(name="exchangerate", description="Узнать курс и график валют")
+@bot.add_command(name="exchangerate", description="Узнать курс и график валют")
 async def exchangerate(ctx, currency_from: str, currency_to: str, amount: float = 1.0):
     currency_from = currency_from.upper()
     currency_to = currency_to.upper()
@@ -115,7 +115,7 @@ async def exchangerate(ctx, currency_from: str, currency_to: str, amount: float 
     file = discord.File(chart, filename="chart.png")
     await ctx.respond(text, file=file)
 
-@bot.slash_command(name="setrate", description="Изменить курс валюты и её волатильность")
+@bot.add_command(name="setrate", description="Изменить курс валюты и её волатильность")
 @has_currency_manager_role()
 async def setrate(ctx, currency: str, new_rate: float, new_volatility: float = None):
     currency = currency.upper()
@@ -135,7 +135,7 @@ async def setrate(ctx, currency: str, new_rate: float, new_volatility: float = N
 
     await ctx.respond(response)
 
-@bot.slash_command(name="addcurrency", description="Добавить валюту")
+@bot.add_command(name="addcurrency", description="Добавить валюту")
 @has_currency_manager_role()
 async def addcurrency(ctx, currency: str, rate: float, volatility: float = 0.05):
     currency = currency.upper()
@@ -149,7 +149,7 @@ async def addcurrency(ctx, currency: str, rate: float, volatility: float = 0.05)
     exchange_rate_history[currency] = [rate]
     await ctx.respond(f"Валюта {currency} добавлена.")
 
-@bot.slash_command(name="removecurrency", description="Удалить валюту")
+@bot.add_command(name="removecurrency", description="Удалить валюту")
 @has_currency_manager_role()
 async def removecurrency(ctx, currency: str):
     currency = currency.upper()
@@ -167,21 +167,21 @@ async def removecurrency(ctx, currency: str):
     del exchange_rate_history[currency]
     await ctx.respond(f"Валюта {currency} удалена.")
 
-@bot.slash_command(name="setexchangechannel", description="Назначить канал для публикации курсов валют")
+@bot.add_command(name="setexchangechannel", description="Назначить канал для публикации курсов валют")
 @commands.has_permissions(administrator=True)
 async def setexchangechannel(ctx, channel: discord.TextChannel):
     global exchange_rate_channel_id
     exchange_rate_channel_id = channel.id
     await ctx.respond(f"Канал {channel.mention} теперь выбран для публикации курсов валют.")
 
-@bot.slash_command(name="setcurrencyrole", description="Назначить роль для управления валютами")
+@bot.add_command(name="setcurrencyrole", description="Назначить роль для управления валютами")
 @commands.has_permissions(administrator=True)
 async def setcurrencyrole(ctx, role: discord.Role):
     global currency_manager_role_id
     currency_manager_role_id = role.id
     await ctx.respond(f"Роль {role.mention} теперь может управлять валютами.")
 
-@bot.slash_command(name="maincurrency", description="Изменить основную валюту")
+@bot.add_command(name="maincurrency", description="Изменить основную валюту")
 @commands.has_permissions(administrator=True)
 async def maincurrency(ctx, new_base_currency: str):
     global BASE_CURRENCY
@@ -201,7 +201,7 @@ async def maincurrency(ctx, new_base_currency: str):
 
     await ctx.respond(f"Основная валюта изменена на {BASE_CURRENCY}!")
 
-@bot.slash_command(name="help", description="Показать список команд бота")
+@bot.add_command(name="help", description="Показать список команд бота")
 async def help_command(ctx):
     help_text = (
         "**Список команд:**\n"
