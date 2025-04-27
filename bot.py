@@ -150,7 +150,6 @@ def generate_exchange_chart(currency_from, currency_to):
 class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="/", intents=discord.Intents.all())
-        self.tree = app_commands.CommandTree(self)
 bot = MyBot()
 
 @bot.event
