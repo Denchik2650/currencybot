@@ -233,5 +233,8 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     scheduler.start()
 
-TOKEN = os.getenv("YOUR_BOT_TOKEN")
-client.run(TOKEN)
+token = os.getenv("YOUR_BOT_TOKEN")
+if token is None:
+    print("Error: YOUR_BOT_TOKEN environment variable not found!")
+else:
+    bot.run(token)
