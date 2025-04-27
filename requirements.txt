@@ -1,4 +1,5 @@
 py-cord
+discord.py
 apscheduler
 matplotlib
 scipy
