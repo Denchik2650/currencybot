@@ -1,5 +1,6 @@
 ﻿import discord
 from discord.ext import commands
+from discord import app_commands
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import random
 import matplotlib.pyplot as plt
@@ -7,7 +8,6 @@ import numpy as np
 from scipy.interpolate import make_interp_spline
 import sqlite3
 import io
-import os
 
 # --- Настройка базы данных ---
 conn = sqlite3.connect('currencies.db')
@@ -146,7 +146,19 @@ def generate_exchange_chart(currency_from, currency_to):
     return buf
 
 # --- Команды ---
-@bot.slash_command(name="exchangerate", description="Узнать курс и график валют")
+
+class MyBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="/", intents=discord.Intents.all())
+        self.tree = app_commands.CommandTree(self)
+bot = MyBot()
+
+@bot.event
+async def on_ready():
+    awaitbot.tree.sync()
+    print(f"Logged in as{bot.user}")
+
+@bot.tree.command(name="exchangerate", description="Узнать курс и график валют")
 async def exchangerate(ctx, currency_from: str, currency_to: str, amount: float = 1.0):
     currency_from = currency_from.upper()
     currency_to = currency_to.upper()
@@ -165,7 +177,7 @@ async def exchangerate(ctx, currency_from: str, currency_to: str, amount: float 
     file = discord.File(chart, filename="chart.png")
     await ctx.respond(text, file=file)
 
-@bot.slash_command(name="setrate", description="Изменить курс валюты и её волатильность")
+@bot.tree.command(name="setrate", description="Изменить курс валюты и её волатильность")
 @has_currency_manager_role()
 async def setrate(ctx, currency: str, new_rate: float, new_volatility: float = None):
     currency = currency.upper()
@@ -181,7 +193,7 @@ async def setrate(ctx, currency: str, new_rate: float, new_volatility: float = N
     save_currency(currency, exchange_rates[currency], currency_volatility[currency])
     await ctx.respond(f"Курс {currency} установлен на {new_rate}.\nВолатильность: {currency_volatility[currency]}")
 
-@bot.slash_command(name="addcurrency", description="Добавить валюту")
+@bot.tree.command(name="addcurrency", description="Добавить валюту")
 @has_currency_manager_role()
 async def addcurrency(ctx, currency: str, rate: float, volatility: float = 0.05):
     currency = currency.upper()
@@ -196,7 +208,7 @@ async def addcurrency(ctx, currency: str, rate: float, volatility: float = 0.05)
     save_currency(currency, rate, volatility)
     await ctx.respond(f"Валюта {currency} добавлена.")
 
-@bot.slash_command(name="removecurrency", description="Удалить валюту")
+@bot.tree.command(name="removecurrency", description="Удалить валюту")
 @has_currency_manager_role()
 async def removecurrency(ctx, currency: str):
     currency = currency.upper()
@@ -216,7 +228,7 @@ async def removecurrency(ctx, currency: str):
     delete_currency(currency)
     await ctx.respond(f"Валюта {currency} удалена.")
 
-@bot.slash_command(name="setexchangechannel", description="Назначить канал для публикации курсов валют")
+@bot.tree.command(name="setexchangechannel", description="Назначить канал для публикации курсов валют")
 @commands.has_permissions(administrator=True)
 async def setexchangechannel(ctx, channel: discord.TextChannel):
     global exchange_rate_channel_id
@@ -224,7 +236,7 @@ async def setexchangechannel(ctx, channel: discord.TextChannel):
     save_setting('exchange_channel', str(channel.id))
     await ctx.respond(f"Канал {channel.mention} выбран для публикации курсов валют.")
 
-@bot.slash_command(name="setcurrencyrole", description="Назначить роль для управления валютами")
+@bot.tree.command(name="setcurrencyrole", description="Назначить роль для управления валютами")
 @commands.has_permissions(administrator=True)
 async def setcurrencyrole(ctx, role: discord.Role):
     global currency_manager_role_id
@@ -232,7 +244,7 @@ async def setcurrencyrole(ctx, role: discord.Role):
     save_setting('currency_role', str(role.id))
     await ctx.respond(f"Роль {role.mention} теперь управляет валютами.")
 
-@bot.slash_command(name="maincurrency", description="Изменить основную валюту")
+@bot.tree.command(name="maincurrency", description="Изменить основную валюту")
 @commands.has_permissions(administrator=True)
 async def maincurrency(ctx, new_base_currency: str):
     global BASE_CURRENCY
@@ -254,7 +266,7 @@ async def maincurrency(ctx, new_base_currency: str):
 
     await ctx.respond(f"Основная валюта изменена на {BASE_CURRENCY}!")
 
-@bot.slash_command(name="help", description="Показать список команд бота")
+@bot.tree.command(name="help", description="Показать список команд бота")
 async def help_command(ctx):
     help_text = (
         "**Список команд:**\n"
@@ -286,4 +298,4 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     scheduler.start()
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+bot.run("DISCORD_TOKEN")
