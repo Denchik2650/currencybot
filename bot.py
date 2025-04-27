@@ -297,4 +297,4 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     scheduler.start()
 
-bot.run("MTM2NjA2NzAyMjI2NTMyMzY3Mg.GFUhHY.sAQUIuO9AgGlt92C5A7DmHptPqq5ZIF_Doc9Xk")
+bot.run("TOKEN")
