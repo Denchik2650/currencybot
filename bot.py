@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import make_interp_spline
 import io
+import os
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -232,4 +233,5 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     scheduler.start()
 
-bot.run("YOUR_BOT_TOKEN")
+TOKEN = os.getenv(YOUR_BOT_TOKEN)
+client.run(TOKEN)
