@@ -285,4 +285,4 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     scheduler.start()
 
-bot.run('YOUR_BOT_TOKEN')
+bot.run(os.getenv("DISCORD_TOKEN"))
