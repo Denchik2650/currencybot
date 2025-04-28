@@ -9,6 +9,7 @@ import io
 import os
 import sqlite3
 from datetime import datetime, timedelta
+import webserver
 
 # Database setup
 def setup_database():
@@ -403,5 +404,6 @@ async def on_ready():
 
 
 # Запуск бота
+webserver.keep_alive()
 token = os.getenv("DISCORD_TOKEN")  # Discord bot token from Replit Secrets
 bot.run(token)
