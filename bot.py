@@ -19,10 +19,7 @@ def setup_database():
                  (symbol TEXT PRIMARY KEY, rate REAL, volatility REAL)''')
     c.execute('''CREATE TABLE IF NOT EXISTS rate_history
                  (symbol TEXT, rate REAL, timestamp TEXT)''')
-    try:
-        c.execute("ALTER TABLE currencies ADD COLUMN name TEXT")
-    except sqlite3.OperationalError:
-        pass  # Поле уже существует
+    c.execute("ALTER TABLE currencies ADD COLUMN name TEXT")
 
     conn.commit()
     conn.close()
