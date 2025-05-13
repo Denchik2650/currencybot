@@ -19,6 +19,13 @@ def setup_database():
                  (symbol TEXT PRIMARY KEY, rate REAL, volatility REAL)''')
     c.execute('''CREATE TABLE IF NOT EXISTS rate_history
                  (symbol TEXT, rate REAL, timestamp TEXT)''')
+    
+    # Check if name column exists
+    cursor = c.execute('PRAGMA table_info(currencies)')
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'name' not in columns:
+        c.execute("ALTER TABLE currencies ADD COLUMN name TEXT")
+
     conn.commit()
     conn.close()
 
@@ -28,12 +35,12 @@ def init_default_currencies():
     c.execute("SELECT COUNT(*) FROM currencies")
     if c.fetchone()[0] == 0:
         default_currencies = [
-            ('SOL', 1.0, 0.01),
-            ('LUN', 3.5, 0.02),
-            ('TAR', 0.8, 0.04),
-            ('VEX', 5.2, 0.1)
+            ('SOL', 1.0, 0.01, 'Solar'),
+            ('LUN', 3.5, 0.02, 'Luna'),
+            ('TAR', 0.8, 0.04, 'Taro'),
+            ('VEX', 5.2, 0.1, 'Vexus')
         ]
-        c.executemany("INSERT INTO currencies VALUES (?, ?, ?)", default_currencies)
+        c.executemany("INSERT INTO currencies (symbol, rate, volatility, name) VALUES (?, ?, ?, ?)", default_currencies)
         for currency in default_currencies:
             c.execute("INSERT INTO rate_history VALUES (?, ?, ?)",
                      (currency[0], currency[1], datetime.now().isoformat()))
@@ -247,9 +254,10 @@ async def setrate(ctx,
 @bot.slash_command(name="addcurrency", description="Добавить валюту")
 @has_currency_manager_role()
 async def addcurrency(ctx,
-                      currency: str,
-                      rate: float,
-                      volatility: float = 0.05):
+                     currency: str,
+                     rate: float,
+                     volatility: float = 0.05,
+                     name: str = "Без названия"):
     currency = currency.upper()
 
     if currency in exchange_rates:
@@ -258,7 +266,8 @@ async def addcurrency(ctx,
 
     conn = sqlite3.connect('currency.db')
     c = conn.cursor()
-    c.execute("INSERT INTO currencies VALUES (?, ?, ?)", (currency, rate, volatility))
+    c.execute("INSERT INTO currencies (symbol, rate, volatility, name) VALUES (?, ?, ?, ?)",
+             (currency, rate, volatility, name))
     c.execute("INSERT INTO rate_history VALUES (?, ?, ?)",
              (currency, rate, datetime.now().isoformat()))
     conn.commit()
@@ -267,7 +276,7 @@ async def addcurrency(ctx,
     exchange_rates[currency] = rate
     currency_volatility[currency] = volatility
     exchange_rate_history[currency] = [rate]
-    await ctx.respond(f"Валюта {currency} добавлена.")
+    await ctx.respond(f"Валюта {currency} ({name}) добавлена.")
 
 
 @bot.slash_command(name="removecurrency", description="Удалить валюту")
@@ -319,7 +328,7 @@ async def setcurrencyrole(ctx, role: discord.Role):
 async def currencylist(ctx):
     conn = sqlite3.connect('currency.db')
     c = conn.cursor()
-    c.execute("SELECT symbol, rate, volatility FROM currencies")
+    c.execute("SELECT symbol, rate, volatility, COALESCE(name, '') FROM currencies")
     currencies = c.fetchall()
     conn.close()
 
@@ -327,12 +336,13 @@ async def currencylist(ctx):
     message = "**Список всех валют:**\n\n"
     message += f"**Основная валюта: {BASE_CURRENCY}**\n\n"
 
-    for symbol, rate, volatility in currencies:
+    for symbol, rate, volatility, name in currencies:
+        name_text = f" — {name}" if name else ""
         if symbol == BASE_CURRENCY:
-            message += f"🔸 **{symbol}** (основная валюта)\n"
+            message += f"🔸 **{symbol}** (основная валюта{name_text})\n"
         else:
             exchange_rate = rate / exchange_rates[BASE_CURRENCY]
-            message += f"💠 **{symbol}**\n"
+            message += f"💠 **{symbol}**{name_text}\n"
             message += f"  • Курс: 1 {BASE_CURRENCY} = {round(exchange_rate, 4)} {symbol}\n"
             message += f"  • Волатильность: {round(volatility * 100, 2)}%\n\n"
 
